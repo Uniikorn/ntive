@@ -21,7 +21,7 @@
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/ntive.git
+git clone https://github.com/Uniikorn/ntive.git
 cd ntive
 pip install -e .
 ```
