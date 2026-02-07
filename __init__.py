@@ -21,32 +21,29 @@ Usage:
 """
 
 __version__ = "0.1.0"
+__all__ = ["__version__"]
 
-from ir import SemanticIR, IRStep
-from executor import execute
-from trace import TraceNode, TraceLog
-from graph import CausalGraph
+# Optional imports - may fail when imported as a package from subdirectory
+try:
+    from ir import SemanticIR, IRStep
+    from executor import execute
+    from trace import TraceNode, TraceLog
+    from graph import CausalGraph
+    
+    __all__.extend([
+        "SemanticIR",
+        "IRStep",
+        "execute",
+        "TraceNode",
+        "TraceLog",
+        "CausalGraph",
+    ])
+except ImportError:
+    pass  # Submodule-only import
 
 # Optional: import if available
 try:
     from executor import ExecutionError, SUPPORTED_ACTIONS
+    __all__.extend(["ExecutionError", "SUPPORTED_ACTIONS"])
 except ImportError:
-    ExecutionError = Exception
-    SUPPORTED_ACTIONS = ["set", "validate", "emit"]
-
-__all__ = [
-    # Core IR
-    "SemanticIR",
-    "IRStep",
-    # Execution
-    "execute",
-    "ExecutionError",
-    "SUPPORTED_ACTIONS",
-    # Tracing
-    "TraceNode",
-    "TraceLog",
-    # Graph analysis
-    "CausalGraph",
-    # Version
-    "__version__",
-]
+    pass

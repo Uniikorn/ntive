@@ -50,7 +50,7 @@ Issues = "https://github.com/yourusername/ntive/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["ntive*"]
+include = ["ntive*", "examples*"]
 
 [tool.setuptools]
 py-modules = ["ir", "executor", "trace", "graph"]
