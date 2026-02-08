@@ -1,5 +1,13 @@
 """
-ast_nodes.py
+ast_nodes.py — INTERNAL MODULE (unstable)
+=========================================
+
+.. warning::
+
+    This module is **internal and experimental**. It is NOT part of the
+    Ntive Core public API and may change or be removed without notice.
+
+    Do not import from ``ntive.ast_nodes`` directly.
 
 AST node definitions for Ntive scripts.
 Pure data structures, no execution logic.
@@ -14,7 +22,7 @@ class SourceLocation:
     """Location in source code for error reporting."""
     line: int
     column: int = 0
-    
+
     def __str__(self) -> str:
         return f"line {self.line}"
 
@@ -83,7 +91,7 @@ class Task:
 class Script:
     """Root AST node containing all tasks."""
     tasks: List[Task]
-    
+
     def to_dict(self) -> dict:
         """Convert AST to dict for serialization."""
         def cmd_to_dict(cmd: Command) -> dict:
@@ -105,7 +113,7 @@ class Script:
                     d["y"] = cmd.y
                 return d
             return {}
-        
+
         return {
             "tasks": [
                 {
