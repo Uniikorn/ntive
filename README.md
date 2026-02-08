@@ -1,24 +1,230 @@
-# Ntive — Causal Execution Engine
+# Ntive Core — Semantic Decision Infrastructure
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-856%20passing-brightgreen.svg)]()
 
-**Ntive** is a deterministic execution engine with full causal traceability. Every decision has an explicit origin in the Semantic IR — no implicit or "magic" behaviors.
+**Ntive Core** is deterministic decision infrastructure that bridges human intent and AI systems. It provides the semantic primitives for building auditable, traceable, and reproducible decision-making pipelines.
 
-## Why Ntive?
+## What Ntive Is
 
-| Problem | Ntive Solution |
-|---------|----------------|
-| AI agents are opaque | Every action has a traceable `reason` |
-| Non-reproducible results | Same IR → Same execution (deterministic) |
-| Impossible to audit | Immutable JSONL trace log |
-| Compliance (EU AI Act) | Full causal chain for any decision |
-| Debugging is hard | Navigate causal graph to find root cause |
+- **Semantic bridge** — Structured contracts between humans and AI systems
+- **Decision infrastructure** — Primitives for capturing, tracing, and auditing decisions
+- **Deterministic** — Same inputs always produce identical outputs
+- **Immutable** — All data structures are frozen after construction
+- **Non-executable** — Describes decisions, never performs them
 
-## Quick Start
+## What Ntive Is NOT
 
-### Installation
+| Not This | Why |
+|----------|-----|
+| An AI agent | Ntive describes decisions; it doesn't make them autonomously |
+| An executor | Ntive traces what should happen; external systems act |
+| A learning system | No adaptation, no hidden state, no inference |
+| A chatbot | No NLU, no generation, no conversation management |
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         INBOUND                                     │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐          │
+│  │  Capability  │    │    Policy    │    │   Memory     │          │
+│  │  Descriptor  │    │    Rules     │    │   Scope      │          │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘          │
+│         │                   │                   │                   │
+│         └───────────────────┼───────────────────┘                   │
+│                             ▼                                       │
+│                   ┌──────────────────┐                              │
+│                   │ DecisionRequest  │                              │
+│                   └────────┬─────────┘                              │
+└────────────────────────────┼────────────────────────────────────────┘
+                             │
+                             ▼
+                   ┌──────────────────┐
+                   │ DecisionEngine   │  ← Pure orchestration
+                   │ (no side effects)│
+                   └────────┬─────────┘
+                             │
+┌────────────────────────────┼────────────────────────────────────────┐
+│                            ▼                         OUTBOUND       │
+│                   ┌──────────────────┐                              │
+│                   │ DecisionResponse │                              │
+│                   └────────┬─────────┘                              │
+│         ┌──────────────────┼──────────────────┐                     │
+│         ▼                  ▼                  ▼                     │
+│  ┌────────────┐    ┌────────────┐    ┌────────────┐                 │
+│  │  ACCEPTED  │    │  REJECTED  │    │  DEFERRED  │                 │
+│  │  + Decision│    │  + Reason  │    │  + Inputs  │                 │
+│  │  + Trace   │    │  + Code    │    │  + Token   │                 │
+│  └────────────┘    └────────────┘    └────────────┘                 │
+└─────────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+                   ┌──────────────────┐
+                   │   TraceReplay    │  ← Audit & verification
+                   │ (read-only)      │
+                   └──────────────────┘
+```
+
+---
+
+## Core Primitives
+
+### Decision
+
+An immutable record of a decision:
+
+```python
+from ntive import Decision, Alternative, Confidence
+
+decision = Decision(
+    inputs={"user_id": "u123", "action": "transfer", "amount": 500},
+    selected_option="approve",
+    alternatives=[
+        Alternative(option="reject", reason_not_selected="Amount within limits"),
+        Alternative(option="escalate", reason_not_selected="User verified"),
+    ],
+    rationale="Transfer approved: amount $500 is within user's daily limit of $1000",
+    confidence=Confidence(value=0.95, lower_bound=0.90, upper_bound=0.98),
+)
+```
+
+### Trace
+
+An ordered, immutable chain of decisions with causal links:
+
+```python
+from ntive import Trace, CausalReason
+
+trace = Trace.build([
+    (decision1, None),  # Root decision
+    (decision2, CausalReason("Follows from approval", "policy")),
+    (decision3, "User confirmed"),  # String shorthand
+])
+
+# Content-addressable
+print(trace.trace_id)  # sha256 hash of content
+```
+
+### CapabilityDescriptor
+
+Declares what an action can do:
+
+```python
+from ntive import CapabilityDescriptor, CapabilityInput, DeclaredEffect
+
+capability = CapabilityDescriptor(
+    name="transfer_funds",
+    description="Transfer money between accounts",
+    inputs=[
+        CapabilityInput(key="from_account", type="string", required=True),
+        CapabilityInput(key="to_account", type="string", required=True),
+        CapabilityInput(key="amount", type="number", required=True),
+    ],
+    effects=[
+        DeclaredEffect(category="financial", target="balance", description="Modifies account balance"),
+    ],
+)
+```
+
+### Policy
+
+Declarative rules with conflict resolution:
+
+```python
+from ntive import Policy, PolicyRule, PolicyEffect
+
+policy = Policy.build([
+    PolicyRule(
+        rule_id="max_transfer",
+        condition="amount > 10000",
+        effect=PolicyEffect.DENY,
+        priority=100,
+    ),
+    PolicyRule(
+        rule_id="verified_user",
+        condition="user.verified == true",
+        effect=PolicyEffect.ALLOW,
+        priority=50,
+    ),
+])
+```
+
+---
+
+## Request/Response Flow
+
+```python
+from ntive import DecisionRequest, DecisionEngine, ResponseType
+
+# Build a request
+request = DecisionRequest(
+    query={"action": "transfer", "amount": 500},
+    context={"user": {"id": "u123", "verified": True}},
+    capabilities=[capability],
+    policies=[policy],
+)
+
+# Evaluate (pure, no side effects)
+engine = DecisionEngine()
+response = engine.evaluate(request)
+
+# Handle response
+match response.response_type:
+    case ResponseType.ACCEPTED:
+        print(f"Decision: {response.payload.decision.selected_option}")
+        print(f"Trace ID: {response.payload.trace.trace_id}")
+    case ResponseType.REJECTED:
+        print(f"Rejected: {response.payload.reason}")
+    case ResponseType.DEFERRED:
+        print(f"Need more info: {response.payload.required_inputs}")
+```
+
+---
+
+## Trace Replay (Audit)
+
+Replay and verify past decisions without re-execution:
+
+```python
+from ntive import TraceReplay
+
+# Load from file
+replay = TraceReplay.load_jsonl("trace.jsonl")
+
+# Validate causal chain
+validation = replay.validate_chain()
+if not validation.is_valid:
+    print(f"Broken links: {validation.broken_links}")
+
+# Verify determinism
+check = replay.verify_determinism(expected_hash="sha256:...")
+print(f"Deterministic: {check.is_deterministic}")
+
+# Human-readable explanation
+explanation = replay.explain()
+print(explanation.to_text())
+```
+
+---
+
+## Guarantees
+
+| Property | Guarantee |
+|----------|-----------|
+| **Deterministic** | Same request → same response, always |
+| **Immutable** | All primitives frozen after construction |
+| **Content-addressable** | Trace IDs = SHA-256 of content |
+| **Serializable** | All types ↔ JSON, deterministically |
+| **Non-executable** | Describes intent; never acts |
+| **Auditable** | Every decision traceable to origin |
+
+---
+
+## Installation
 
 ```bash
 git clone https://github.com/Uniikorn/ntive.git
@@ -26,183 +232,45 @@ cd ntive
 pip install -e .
 ```
 
-### Basic Usage
+---
 
-```python
-from ntive import SemanticIR, IRStep, execute, TraceLog, CausalGraph
+## Quality
 
-# 1. Define your Semantic IR
-ir = SemanticIR(
-    goal="Process user order",
-    context={"user_id": "u123", "amount": 99.99},
-    steps=[
-        IRStep(action="set", params={"key": "user_id"}),
-        IRStep(action="validate", params={"key": "amount"}),
-        IRStep(action="emit", params={"target": "order_created"})
-    ]
-)
+| Tool | Status |
+|------|--------|
+| **pytest** | 856 tests passing |
+| **ruff** | All checks passing |
+| **flake8** | Zero errors |
+| **pyright** | Type-checked (15 warnings tracked) |
 
-# 2. Execute with trace logging
-trace = TraceLog("trace.jsonl")
-result = execute(ir, trace)
-
-print(result)
-# {'goal': 'Process user order', 'result': {'user_id': 'u123', 'validated': 'amount', 'exists': True, 'emitted': 'order_created'}}
-
-# 3. Analyze causal chain
-graph = CausalGraph.from_jsonl("trace.jsonl")
-print(graph.summary())
-# {'total_nodes': 3, 'root': '...', 'max_depth': 2}
-
-# Trace cause of any node
-last_node = list(graph.nodes.keys())[-1]
-causal_chain = graph.trace_cause(last_node)
-for node in causal_chain:
-    print(f"  {node['action']} <- {node['reason']}")
-```
-
-## Core Concepts
-
-### Semantic IR
-
-The **Semantic IR** is a structured representation of intent:
-
-```python
-@dataclass
-class SemanticIR:
-    goal: str                    # Human-readable intent
-    context: Dict[str, Any]      # Domain data for execution
-    steps: List[IRStep]          # Ordered actions to execute
-
-@dataclass
-class IRStep:
-    action: str                  # Action name: "set", "validate", "emit"
-    params: Dict[str, Any]       # Action parameters
-```
-
-### Trace Nodes
-
-Every execution step produces a **TraceNode** with causal linkage:
-
-```python
-@dataclass
-class TraceNode:
-    id: str                      # Unique identifier
-    parent_id: Optional[str]     # Link to previous node
-    depth: int                   # Distance from root
-    action: str                  # Action executed
-    input: dict                  # Input parameters
-    output: dict                 # Execution result
-    reason: dict                 # Causal reason (type, source, ref, value)
-    timestamp: float             # Execution time
-```
-
-### Causal Graph
-
-The **CausalGraph** enables traversal and analysis:
-
-```python
-graph = CausalGraph.from_jsonl("trace.jsonl")
-
-# Navigation
-graph.get_root()                 # Root node ID
-graph.get_ancestors(node_id)     # All ancestors to root
-graph.get_descendants(node_id)   # All descendants
-
-# Causal analysis
-graph.trace_cause(node_id)       # Full causal chain as list of nodes
-```
-
-## Available Actions
-
-| Action | Description | Params |
-|--------|-------------|--------|
-| `set` | Get value from context | `key`: context key |
-| `validate` | Check if key exists | `key`: context key |
-| `emit` | Emit an event/result | `target`: event name |
-
-## Key Properties
-
-### Determinism
-
-Same IR always produces the same execution trace:
-
-```python
-ir1 = SemanticIR(goal="test", context={"x": 1}, steps=[...])
-ir2 = SemanticIR(goal="test", context={"x": 1}, steps=[...])
-
-# Execute both
-result1 = execute(ir1, TraceLog("t1.jsonl"))
-result2 = execute(ir2, TraceLog("t2.jsonl"))
-
-assert result1 == result2  # Always true
-```
-
-### Prompt Independence
-
-Different prompts that produce the same IR yield identical executions:
-
-```python
-# These prompts compress to the same IR:
-prompt_a = "fetch user data for user 123"
-prompt_b = "get the user info, id=123"
-
-# Same IR → Same execution → Same trace structure
-```
-
-### Explicit Causality
-
-Every `reason` field traces back to the IR:
-
-```python
-{
-    "type": "constraint",      # Always "constraint" (no inference)
-    "source": "ir",            # Always "ir" (no implicit sources)
-    "ref": "context.user_id",  # Explicit reference
-    "value": "u123"            # Actual value used
-}
-```
+---
 
 ## Project Structure
 
 ```
 ntive/
-├── ir.py           # SemanticIR and IRStep definitions
-├── executor.py     # Deterministic execution engine
-├── trace.py        # TraceNode and TraceLog (JSONL)
-├── graph.py        # CausalGraph for traversal/analysis
-├── demo.py         # Example usage
-└── test_trace.py   # Comprehensive test suite (800+ lines)
+├── __init__.py         # Public API (92 exports)
+├── decision.py         # Decision, Alternative, Confidence
+├── trace.py            # Trace, CausalReason
+├── trace_replay.py     # TraceReplay (audit tool)
+├── memory.py           # MemoryScope, MemoryDiff
+├── policy.py           # Policy, PolicyRule
+├── capability.py       # CapabilityDescriptor
+├── request.py          # DecisionRequest
+├── response.py         # DecisionResponse
+├── engine.py           # DecisionEngine
+├── parser.py           # (internal) DSL parser
+├── runtime.py          # (internal) DSL runtime
+└── errors.py           # (internal) Error classes
 ```
-
-## Running Tests
-
-```bash
-pytest test_trace.py -v
-```
-
-Tests verify:
-- ✅ Deterministic execution
-- ✅ Valid causal chains
-- ✅ All nodes have explicit reasons
-- ✅ IR independence from prompts
-- ✅ Edge cases (empty context, many steps)
-
-## Use Cases
-
-- **Regulated Industries**: Finance, healthcare, legal — where audit trails are mandatory
-- **AI Agent Debugging**: Trace why an agent made a specific decision
-- **Prompt Optimization**: Compare different prompts by their IR efficiency
-- **Compliance**: EU AI Act, SOC2, HIPAA requirements for explainability
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions welcome! Please open an issue or PR.
 
 ---
 
-**Ntive**: *Every decision has a why.*
+## License
+
+MIT License — see [LICENSE](LICENSE)
+
+---
+
+**Ntive Core**: *Decisions you can trace. Infrastructure you can trust.*
+
