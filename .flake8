@@ -1,0 +1,36 @@
+# =============================================================================
+# Flake8 Configuration - Formal Warning Ignores
+# =============================================================================
+# This file documents which flake8 warnings are intentionally ignored.
+
+[flake8]
+# Line length: 110 allows for type annotations without excessive wrapping
+# 
+# RATIONALE:
+# - PEP 8's 79-char limit dates from punch-card era (1960s)
+# - Modern displays easily handle 120+ characters
+# - Complex type annotations (Union, Optional, generics) need horizontal space
+# - 110 is a practical compromise: readable on most displays, 
+#   accommodates modern Python typing without constant line breaks
+#
+# Lines exceeding 110 chars require inline `# noqa: E501` with justification
+max-line-length = 110
+
+# Ignored rules
+# E302: "expected 2 blank lines" - conflicts with ruff isort formatting
+#       Ruff's import organization is authoritative; E302 triggers false positives
+#       when ruff separates stdlib/third-party/local imports with single blank lines
+extend-ignore = E302
+
+# Directories to exclude
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    build,
+    dist,
+    *.egg-info
+
+# Statistics
+count = true
+statistics = true
